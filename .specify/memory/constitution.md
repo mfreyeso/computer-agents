@@ -1,50 +1,57 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+# Sync Impact Report
+Version change: 1.0.0 (initial)
+Modified principles:
+- I. Async-First I/O
+- II. Strict Concurrency & Thread-Safety
+- III. Robust Session Isolation & Containerization
+- IV. Clean Data Engineering
+- V. Quality & Type Safety
+Templates requiring updates:
+- ✅ .specify/templates/plan-template.md 
+- ✅ .specify/templates/spec-template.md 
+- ✅ .specify/templates/tasks-template.md 
+Follow-up TODOs: None
+-->
+# energent-code Constitution
+<!-- High-performance AI integration API -->
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Async-First I/O
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All network operations and I/O tasks MUST be explicitly non-blocking. Synchronous calls that block the main event loop are strictly prohibited. The rationale is to ensure high throughput and low latency for the integration API without tying up resources.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Strict Concurrency & Thread-Safety
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+We embrace modern Python patterns and prepare for Python 3.13+ free-threading capabilities. Concurrency controls MUST be strict and explicit to prevent race conditions during CPU-bound tasks. Shared state should be minimized, and robust synchronization primitives used where necessary. The rationale is to safely utilize all processing power without data corruption.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Robust Session Isolation & Containerization
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+All components MUST be containerized. Strong session isolation MUST be enforced to prevent cross-contamination between API requests and to ensure secure, reliable independent execution environments. The rationale is to provide independent execution and scaling.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Clean Data Engineering
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+State persistence MUST be reliable and clean, offloaded correctly so as not to bottleneck the main event loop. Data integrity, correct data modeling, and clean engineering practices are mandatory. The rationale is to maintain accurate API state while handling high volumes.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Quality & Type Safety
+
+All code MUST leverage `ty` for comprehensive type checking, `ruff` for strict linting/formatting, and `pytest` for testing, as configured via `uv`. All code must be strongly typed with modern typing constructs.
+
+## Additional Constraints
+
+All components MUST run within isolated containers (e.g., Docker) to guarantee repeatable environments and facilitate scaling. Network configurations and external dependencies MUST support asynchronous integration patterns.
+
+## Development Workflow
+
+- All type checks (`ty`), linter rules (`ruff`), and tests (`pytest`) MUST pass prior to any code integration.
+- CPU-bound tasks MUST be isolated or correctly handled with appropriate concurrency mechanisms to avoid delaying async event loops.
+- No new features can be merged without clear session isolation mechanisms validated in tests.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+All changes to this Constitution MUST go through a formal amendment procedure, requiring documentation of the change, approval from maintainers, and a migration plan if necessary.
+Versioning Policy follows semantic versioning (MAJOR for breaking governance changes, MINOR for new principles, PATCH for clarifications).
+Compliance Review Expectations: All Pull Requests MUST be validated against these strict concurrency, non-blocking rules, and session isolation requirements.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-03-18 | **Last Amended**: 2026-03-18

@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] Async-First I/O (Non-blocking networking)
+- [ ] Strict Concurrency & Thread-Safety (Python 3.13+ free-threading preparation)
+- [ ] Containerization & Session Isolation
+- [ ] Clean Data Engineering & Reliable Persistence
+- [ ] Quality & Type Safety (uv, ty, ruff, pytest)
 
 ## Project Structure
 
