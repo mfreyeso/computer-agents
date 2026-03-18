@@ -3,7 +3,17 @@ name = "energent-code"
 version = "0.1.0"
 description = ""
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "anthropic>=0.45.0",
+    "asyncpg>=0.30",
+    "fastapi>=0.135.1",
+    "pyautogui>=0.9.54",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.13.1",
+    "sqlalchemy>=2.0",
+    "uvicorn>=0.42.0",
+    "websockets>=16.0",
+]
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: computer_use
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d computer_use"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/computer_use
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      vnc_target:
+        condition: service_started
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+
+  vnc_target:
+    image: ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest
+    entrypoint: /opt/vnc_start.sh
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - WIDTH=1024
+      - HEIGHT=768
+    volumes:
+      - ~/.anthropic:/home/computeruse/.anthropic
+      - ./scripts/tool_server.py:/opt/tool_server.py
+      - ./scripts/vnc_start.sh:/opt/vnc_start.sh
+    ports:
+      - "5900:5900"
+      - "8501:8501"
+      - "6080:6080"
+      - "8080:8080"
+      - "8888:8888"
+
+  ui:
+    build:
+      context: ./src/ui
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80" # Maps Nginx standard port 80 into host port 5173
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:

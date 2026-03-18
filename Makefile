@@ -16,3 +16,18 @@ test:
 	uv run pytest
 
 all: lint check test
+
+ui-install:
+	cd src/ui && npm install
+
+ui:
+	cd src/ui && npm run dev
+
+up:
+	docker compose --env-file .env up --build -d
+
+down:
+	docker compose --env-file .env down
+
+logs:
+	docker compose logs -f
