@@ -31,7 +31,7 @@ export default function SidebarList() {
       setLoading(true);
       const newSession = await createSession();
       setSessions([newSession, ...sessions]);
-      setSession(newSession.session_id);
+      setSession(newSession.session_id, newSession.vnc_host);
     } catch (err) {
       console.error("Failed to start new session:", err);
     } finally {
@@ -69,7 +69,7 @@ export default function SidebarList() {
               return (
                 <div 
                   key={s.session_id}
-                  onClick={() => setSession(s.session_id)}
+                  onClick={() => setSession(s.session_id, s.vnc_host)}
                   className={`text-sm p-3 border rounded cursor-pointer transition-all ${
                     isActive 
                       ? 'bg-blue-900/30 border-blue-700/50 text-blue-100 shadow-inner' 

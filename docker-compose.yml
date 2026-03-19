@@ -28,32 +28,16 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/computer_use
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - HOST_PWD=${PWD}
     depends_on:
       db:
         condition: service_healthy
-      vnc_target:
-        condition: service_started
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests
+      - /var/run/docker.sock:/var/run/docker.sock
 
-  vnc_target:
-    image: ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest
-    entrypoint: /opt/vnc_start.sh
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - WIDTH=1024
-      - HEIGHT=768
-    volumes:
-      - ~/.anthropic:/home/computeruse/.anthropic
-      - ./scripts/tool_server.py:/opt/tool_server.py
-      - ./scripts/vnc_start.sh:/opt/vnc_start.sh
-    ports:
-      - "5900:5900"
-      - "8501:8501"
-      - "6080:6080"
-      - "8080:8080"
-      - "8888:8888"
+
 
   ui:
     build:

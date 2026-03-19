@@ -13,7 +13,7 @@ The application is structured into four main isolated components, leveraging Doc
 1. **Frontend UI (`ui`)**: A React/Vite web application using Zustand and tailwindcss. Served statically via Nginx in production, it offers a 3-pane dashboard: Tasks Sidebar, live VNC Viewer, and an Execution Loop agent chat.
 2. **Backend App (`app`)**: A Python-based FastAPI web server. It manages PostgreSQL connections using SQLAlchemy, exposes REST endpoints for Session managing, and WebSocket streams for real-time agent/user interactions.
 3. **Database (`db`)**: A PostgreSQL 15 relational database storing session histories, chat sequences, and agent tool execution tokens.
-4. **VNC Target (`vnc_target`)**: Built on top of `ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest`, extending it with a custom `tool_server.py`. It runs an Xvfb virtual display, a Tint2 panel, a noVNC server, and accepts HTTP requests from the `app` container to perform screen grabs and dispatch PyAutoGUI input events.
+4. **Dynamic VNC Environments**: Rather than a static container, the FastAPI backend acts as an orchestrator using the Docker Engine SDK. For each new agent task, it dynamically spawns an isolated container based on `ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest`. Each container runs its own Xvfb virtual display, noVNC proxy, and a custom Python tool server accessible via uniquely mapped host ports.
 
 ### Session Manager & Request Loop Sequence
 
@@ -24,35 +24,37 @@ sequenceDiagram
     actor User as User
     participant UI as React UI
     participant API as FastAPI App
+    participant Docker as Docker Daemon
     participant DB as PostgreSQL
     participant AI as Anthropic API
-    participant VNC as VNC Target (Tool Server)
+    participant VNC as VNC Environment
 
     User->>UI: Create Session
-    UI->>API: POST /api/sessions/
-    API->>DB: Insert Session (IDLE)
-    API-->>UI: Return Session ID
+    UI->>API: POST /api/v1/sessions/
+    API->>Docker: Spawn Sandbox Container (Random Port)
+    Docker-->>API: Container ID & Mapped Port
+    API->>DB: Insert VncEnvironment & Session
+    API-->>UI: Return Session info & computed vnc_host
     
     User->>UI: Input Prompt Task
     UI->>API: WebSocket Connection (Send prompt)
     API->>DB: Save User Message
     
     loop Agent Execution Loop
-        API->>AI: Stream messages.create(betas=["computer-use-2025-01-24"])
+        API->>AI: Stream messages.create()
         AI-->>API: Stream tokens (Thoughts)
         API-->>UI: WS push (text chunks)
         
         opt Tool Execution Requested
             AI-->>API: tool_use (e.g. computer action)
             API-->>UI: WS push (tool_execution_start)
-            API->>VNC: HTTP POST /execute (Tool Input)
+            API->>VNC: HTTP POST /execute (Tool Input on assigned port)
             Note over VNC: Agent executes PyAutoGUI / Bash inside Xvfb
             VNC-->>API: Returns Base64 Screenshot + status
-            API->>DB: Save Tool Execution Result
             API-->>UI: WS push (vnc_screenshot_result)
         end
     end
-    API->>DB: Mark turn complete
+    API->>DB: Append turn diffs completely to session
 ```
 
 ### Deployment Pattern Architecture
@@ -61,23 +63,33 @@ Below is the Docker service mapping and network integration pattern:
 
 ```mermaid
 graph TD
-    subgraph Docker Network [energent_code_default]
-        UI[UI Container<br/>React + Nginx]
-        APP[App Container<br/>FastAPI + Uvicorn]
-        DB[(DB Container<br/>PostgreSQL 15)]
-        VNC[VNC Target Container<br/>Xvfb + noVNC + Tool Server]
+    subgraph Infrastructure
+        DockerSock[/var/run/docker.sock/]
+    end
+
+    subgraph DockerNetwork [energent_code_default]
+        UI[UI Container<br/>React Client]
+        APP[App Container<br/>FastAPI + Uvicorn + Docker SDK]
+        DB[s19]
+        
+        subgraph DynamicProvisioning [Spawns per Task]
+            VNC1[vnc_env_uuid_1<br/>Port:6080 -> Host:60XXX]
+            VNCN[vnc_env_uuid_N<br/>Port:6080 -> Host:60YYY]
+        end
     end
 
     User(Browser) -->|Port 5173| UI
     User(Browser) -->|Port 8000| APP
-    User(Browser) -->|Port 8080| VNC
-    User(Browser) -.->|Port 5900| VNC
+    User(Browser) -.->|WS: 60XXX/60YYY| VNC1
     
     UI -->|WS / REST| APP
     APP -->|SQLAlchemy| DB
-    APP -->|HTTP:8888| VNC
+    APP -->|Docker API| DockerSock
+    DockerSock -.->|Create/Remove| VNC1
+    APP -->|HTTP:8888| VNC1
+    APP -->|HTTP:8888| VNCN
     
-    APP <-->|External API| Anthropic(Anthropic API)
+    APP <-->|External API| Anthropic[s20]
 ```
 
 ## Setup & Deployment Instructions
@@ -107,7 +119,7 @@ Once running, the components are accessible at:
 
 - **Main React Dashboard**: [http://localhost:5173](http://localhost:5173)
 - **FastAPI Backend (Swagger Docs)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Raw noVNC Stream**: [http://localhost:8080](http://localhost:8080)
+- **VNC Streams**: Rendered dynamically within the React UI mapped directly to transient Docker ports.
 
 ### 3. Log Observation
 

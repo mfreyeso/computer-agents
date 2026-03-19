@@ -2,12 +2,14 @@ import { create } from 'zustand'
 
 export const useSessionStore = create((set, get) => ({
   currentSessionId: null,
+  currentVncHost: null,
   sessionState: 'idle', // 'idle' | 'running' | 'completed' | 'error'
   chatHistory: [],
 
   // Set the active session context
-  setSession: (id) => set({ 
+  setSession: (id, vncHost = null) => set({ 
     currentSessionId: id,
+    currentVncHost: vncHost,
     chatHistory: [], // Clear on jump
     sessionState: 'idle'
   }),
@@ -42,6 +44,7 @@ export const useSessionStore = create((set, get) => ({
   // Clean wipe
   clearSession: () => set({
     currentSessionId: null,
+    currentVncHost: null,
     chatHistory: [],
     sessionState: 'idle'
   })

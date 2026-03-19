@@ -30,7 +30,7 @@ export default function ChatPanel() {
   // Guard loading UI
   if (!currentSessionId) {
     return (
-      <div className="w-96 flex flex-col bg-slate-950 items-center justify-center border-l border-slate-800">
+      <div className="w-[450px] flex flex-col bg-slate-950 items-center justify-center border-l border-slate-800">
           <TerminalSquare size={48} className="text-slate-800 mb-4" />
           <p className="text-slate-500 text-sm font-mono tracking-wide">NO ACTIVE SESSION</p>
       </div>
@@ -38,7 +38,7 @@ export default function ChatPanel() {
   }
 
   return (
-    <div className="w-96 flex flex-col bg-slate-950 border-l border-slate-800 h-full">
+    <div className="w-[450px] flex flex-col bg-slate-950 border-l border-slate-800 h-full">
       <div className="p-3 border-b border-slate-800 bg-slate-900 text-sm font-semibold flex items-center justify-between shadow-sm z-10 shrink-0">
         <span className="flex items-center gap-2 text-slate-200">
            <TerminalSquare size={16} className="text-blue-500" />
@@ -65,8 +65,20 @@ export default function ChatPanel() {
             // Unmarshal block structures generic or strictly formatted
             const role = msg.role || (msg.author === 'user' ? 'user' : 'agent');
             const type = msg.chunk_type || 'text';
-            const text = msg.content;
-            
+            let text = msg.content;
+            if (Array.isArray(text)) {
+               text = text.map(block => {
+                 if (block.type === 'text') return block.text;
+                 if (block.type === 'tool_use') return `[Tool Use: ${block.name}]\nInput: ${JSON.stringify(block.input, null, 2)}`;
+                 if (block.type === 'tool_result') {
+                   const hasImage = Array.isArray(block.content) && block.content.some(c => c.type === 'image');
+                   return `[Tool Result] ${hasImage ? '(includes screenshot)' : ''}`;
+                 }
+                 return JSON.stringify(block);
+               }).join('\n\n');
+            } else if (typeof text === 'object' && text !== null) {
+               text = JSON.stringify(text, null, 2);
+            }
             if (role === 'user') {
                return (
                  <div key={index} className="bg-slate-800 rounded p-3 text-sm border-l-2 border-blue-500 shadow drop-shadow-sm ml-6">

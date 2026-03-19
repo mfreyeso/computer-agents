@@ -5,9 +5,16 @@ import { MonitorPlay, MonitorOff, HelpCircle } from 'lucide-react';
 
 export default function VncViewer() {
   const currentSessionId = useSessionStore(state => state.currentSessionId);
+  const currentVncHost = useSessionStore(state => state.currentVncHost);
   const containerRef = useRef(null);
   const rfbRef = useRef(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Reset retries when session changes
+  useEffect(() => {
+    setRetryCount(0);
+  }, [currentSessionId]);
 
   useEffect(() => {
     if (rfbRef.current) {
@@ -15,16 +22,18 @@ export default function VncViewer() {
       rfbRef.current = null;
     }
 
-    if (!currentSessionId || !containerRef.current) {
+    if (!currentSessionId || !currentVncHost || !containerRef.current) {
       setConnectionStatus('disconnected');
       return;
     }
 
+    let isEffectActive = true;
+    let reconnectTimeout = null;
+
     setConnectionStatus('connecting');
 
-    // Useport 6080 for websockify as per docker-compose
-    const vncUrl = `ws://${window.location.hostname}:6080/`;
-    console.log('Connecting to VNC at:', vncUrl);
+    const vncUrl = `ws://${currentVncHost}/`;
+    console.log(`Connecting to VNC at: ${vncUrl} (Attempt: ${retryCount})`);
     
     try {
       // Robust constructor check for minified/CJS interop environments
@@ -38,11 +47,20 @@ export default function VncViewer() {
       vncInstance.resizeSession = false;
 
       vncInstance.addEventListener('connect', () => {
+        if (!isEffectActive) return;
         setConnectionStatus('connected');
+        setRetryCount(0); // reset retries upon solid connection
       });
 
       vncInstance.addEventListener('disconnect', () => {
+        if (!isEffectActive) return;
         setConnectionStatus('disconnected');
+        // Retry connection roughly every ~2 seconds for up to 30 attempts given container start delays
+        if (retryCount < 30) {
+          reconnectTimeout = setTimeout(() => {
+            if (isEffectActive) setRetryCount(rc => rc + 1);
+          }, 2000);
+        }
       });
 
       rfbRef.current = vncInstance;
@@ -58,6 +76,8 @@ export default function VncViewer() {
       resizeObserver.observe(containerRef.current);
 
       return () => {
+        isEffectActive = false;
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
         resizeObserver.disconnect();
         if (rfbRef.current) {
           try {
@@ -71,14 +91,19 @@ export default function VncViewer() {
         }
         // Remove any orphaned canvas elements left by noVNC to prevent VideoFrame leaks
         if (containerRef.current) {
-          containerRef.current.querySelectorAll('canvas').forEach(c => c.remove());
+           containerRef.current.querySelectorAll('canvas').forEach(c => c.remove());
         }
       };
     } catch (err) {
       console.error('VNC initialization error:', err);
-      setConnectionStatus('disconnected');
+      // Try again even if the constructor throws due to detached DOM states
+      if (retryCount < 30) {
+         reconnectTimeout = setTimeout(() => setRetryCount(rc => rc + 1), 2000);
+      } else {
+         setConnectionStatus('disconnected');
+      }
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, currentVncHost, retryCount]);
 
   return (
     <div className="flex-1 flex flex-col border-r border-slate-800 bg-black relative">
@@ -102,24 +127,26 @@ export default function VncViewer() {
         </span>
       </div>
       
-      <div className="flex-1 w-full h-full flex items-center justify-center pt-10 overflow-hidden relative group">
+      <div className="flex-1 w-full h-full flex items-center justify-center pt-10 overflow-hidden relative group bg-zinc-950">
+        {/* Dedicated container strictly for noVNC so React DOM updates do not clash with raw canvas injection */}
         <div 
            ref={containerRef} 
-           className="w-full h-full flex items-center justify-center outline-none bg-zinc-950" 
+           className="absolute inset-0 z-0" 
            tabIndex="-1" 
-        >
-          {connectionStatus === 'disconnected' && (
-             <div className="flex flex-col items-center justify-center text-slate-600 space-y-4">
-                <MonitorOff size={48} className="opacity-50" />
-                <p className="text-sm font-mono tracking-wider">NO ACTIVE CONNECTION</p>
-                {!currentSessionId && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1 border border-slate-700/50 bg-slate-800/30 px-3 py-1.5 rounded-full">
-                    <HelpCircle size={12}/> Please select or start a session on the left
-                  </p>
-                )}
-             </div>
-          )}
-        </div>
+        />
+        
+        {/* React managed overlay layered above the VNC safely */}
+        {connectionStatus === 'disconnected' && (
+           <div className="z-10 absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-slate-600 space-y-4">
+              <MonitorOff size={48} className="opacity-50" />
+              <p className="text-sm font-mono tracking-wider">NO ACTIVE CONNECTION</p>
+              {!currentSessionId && (
+                <p className="text-xs text-slate-500 flex items-center gap-1 border border-slate-700/50 bg-slate-800/30 px-3 py-1.5 rounded-full pointer-events-auto">
+                  <HelpCircle size={12}/> Please select or start a session on the left
+                </p>
+              )}
+           </div>
+        )}
       </div>
     </div>
   );
