@@ -158,3 +158,9 @@ make all           # Lint + Check + Test sequentially
 make ui-install    # Installs JS dependencies in src/ui
 make ui            # Starts local Vite development server
 ```
+
+## Video Demo
+
+A video demo of the application can be found here:
+
+<https://www.loom.com/share/a923b4e1469245cb8a1068ad7c40036b>
