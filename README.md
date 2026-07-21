@@ -1,4 +1,4 @@
-# Energent Code: Computer Use Demo
+# Agent Computer Use Demo
 
 Author: **Mario Reyes Ojeda**
 
